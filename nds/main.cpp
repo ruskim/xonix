@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include "xonix.h"
- 
+
 typedef struct
 {
     int x;
@@ -54,7 +54,7 @@ void draw_creature( int x, int y, int color)
 {
     x = x*BS;
     y = y*BS;
-    
+
     for( int i=2; i<6; i++) {
         for( int j=2; j<6; j++) {
             P(x+i, y+j) = color;
@@ -95,7 +95,7 @@ void xonix_callback(void *tag, XonixEvent *e)
                 add_changes(e->x, e->y);
             }
             break;
-        
+
         case eObjMoved:
             add_changes(e->x, e->y);
             add_changes(e->prev_x, e->prev_y);
@@ -160,32 +160,32 @@ void init_level()
     score_changed = 1;
     score = 0;
 }
- 
+
 int main(void) 
 {
-	touchPosition touch;
+    touchPosition touch;
 
-	PrintConsole bottomScreen;
- 
-	videoSetMode(MODE_FB0);
-	vramSetBankA(VRAM_A_LCD);
+    PrintConsole bottomScreen;
 
-	videoSetModeSub(MODE_0_2D);
-	vramSetBankC(VRAM_C_SUB_BG);
-	consoleInit(&bottomScreen, 3,BgType_Text4bpp, BgSize_T_256x256, 31, 0, false, true);
+    videoSetMode(MODE_FB0);
+    vramSetBankA(VRAM_A_LCD);
 
-	consoleSelect(&bottomScreen);
- 
-    
+    videoSetModeSub(MODE_0_2D);
+    vramSetBankC(VRAM_C_SUB_BG);
+    consoleInit(&bottomScreen, 3,BgType_Text4bpp, BgSize_T_256x256, 31, 0, false, true);
+
+    consoleSelect(&bottomScreen);
+
+
     p_cnt = 0;
 
     init_level();
 
- 
-	//we like infinite loops in console dev!
-	while(1)
-	{
-		int key_mask;
+
+    //we like infinite loops in console dev!
+    while(1)
+    {
+        int key_mask;
 
         swiWaitForVBlank();
         scanKeys();
@@ -224,8 +224,8 @@ int main(void)
                 init_level();
             }
         }
-	}
- 
-	return 0;
+    }
+
+    return 0;
 }
 
