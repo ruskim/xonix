@@ -2,6 +2,8 @@
 
 #include <nds.h>
 #include <stdlib.h>
+#include <stdio.h>
+
 #include "xonix.h"
  
 typedef struct
@@ -14,6 +16,10 @@ Point *p = 0;
 int p_cnt = 0;
 int p_max = 0;
 
+int evils_cnt = 0;
+int victory = 0;
+int score = 0;
+int score_changed = 0;
 
 #define P(x,y) VRAM_A[(x) + (y) * SCREEN_WIDTH]
 #define W 32
@@ -99,6 +105,15 @@ void xonix_callback(void *tag, XonixEvent *e)
             add_changes(e->x, e->y);
             break;
 
+        case eScore:
+            score = 100 - e->x;
+            score_changed = 1;
+            break;
+
+        case eVictory:
+            victory = 1;
+            break;
+
         default:
             break;
     }
@@ -132,20 +147,40 @@ void process_changes()
     }
 }
 
+
+void init_level()
+{
+    clear_screen();
+    consoleClear();
+    victory = 0;
+    xonix_free();
+    evils_cnt++;
+    xonix_init(32, 24, 17, evils_cnt, xonix_callback, 0);
+    process_changes();
+    score_changed = 1;
+    score = 0;
+}
  
 int main(void) 
 {
-	irqInit();
-	irqEnable(IRQ_VBLANK);
+	touchPosition touch;
+
+	PrintConsole bottomScreen;
  
 	videoSetMode(MODE_FB0);
 	vramSetBankA(VRAM_A_LCD);
+
+	videoSetModeSub(MODE_0_2D);
+	vramSetBankC(VRAM_C_SUB_BG);
+	consoleInit(&bottomScreen, 3,BgType_Text4bpp, BgSize_T_256x256, 31, 0, false, true);
+
+	consoleSelect(&bottomScreen);
  
-    clear_screen();
     
     p_cnt = 0;
-    xonix_init(32, 24, 17, 1, xonix_callback, 0);
-    process_changes();
+
+    init_level();
+
  
 	//we like infinite loops in console dev!
 	while(1)
@@ -175,6 +210,20 @@ int main(void)
         p_cnt = 0;
         xonix_advance(key_mask);
         process_changes();
+
+        if( score_changed) {
+            iprintf("\x1b[10;10HCaptured %i%%", score);
+            score_changed = 0;
+        }
+
+        if( victory) {
+            iprintf("\x1b[2;9HLevel cleared!\n");
+            iprintf("\x1b[4;1HPress 'A' or touch to advance\n");
+            touchRead(&touch);
+            if( (touch.px != 0) || (touch.px != 0) || (keysHeld() & KEY_A )) {
+                init_level();
+            }
+        }
 	}
  
 	return 0;
