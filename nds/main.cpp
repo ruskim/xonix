@@ -21,44 +21,88 @@ int victory = 0;
 int score = 0;
 int score_changed = 0;
 
-#define P(x,y) VRAM_A[(x) + (y) * SCREEN_WIDTH]
+u8* tileMemory;
+u16* mapMemory;
+
 #define W 32
 #define H 24
 #define BS 8
 
-void draw_block( int x, int y, int busy)
+u8 base_tile[64] = 
 {
-    x = x*BS;
-    y = y*BS;
+	0,0,0,0,0,0,0,0,
+	0,1,1,1,1,1,1,0,
+	0,1,2,2,2,2,1,0,
+	0,1,2,2,2,2,1,0,
+	0,1,2,2,2,2,1,0,
+	0,1,2,2,2,2,1,0,
+	0,1,1,1,1,1,1,0,
+	0,0,0,0,0,0,0,0
+};
 
-    for(int i=0;i<BS;i++) {
-        for(int j = 0; j<BS; j++) {
-            if( i < BS-1 && i > 0 && j < BS-1 && j > 0) {
-                if( busy) {
-                    P(x+i,y+j) = RGB15(21,21,21);
-                } else {
-                    if( (i == BS-2) || (i == 1) || (j == BS-2) || (j == 1)) {
-                        P(x+i,y+j) = RGB15(21,21,21);
-                    } else {
-                        P(x+i,y+j) = RGB15(31,31,31);
-                    }
-                }
-            } else {
-                P(x+i,y+j) = RGB15(31,31,31);
-            }
+enum {
+    tFree=0,
+    tBusy,
+    tEvil,
+    tPlayer,
+    tPath,
+    tMax
+};
+
+u8 free_tile[64];
+u8 busy_tile[64];
+u8 evil_tile[64];
+u8 player_tile[64];
+u8 path_tile[64];
+
+u8 *tiles[tMax] = {
+    free_tile,
+    busy_tile,
+    evil_tile,
+    player_tile,
+    path_tile
+};
+
+void set_tile(int x, int y, int t)
+{
+    mapMemory[x+y*32] = t;
+}
+
+void gen_tile(u8 *tile, u8 c)
+{
+    for(int i=0; i<64; i++) {
+        if( base_tile[i] == 2) {
+            tile[i] = c;
+        } else {
+            tile[i] = base_tile[i];
         }
     }
 }
 
-void draw_creature( int x, int y, int color)
-{
-    x = x*BS;
-    y = y*BS;
 
-    for( int i=2; i<6; i++) {
-        for( int j=2; j<6; j++) {
-            P(x+i, y+j) = color;
-        }
+void mk_tiles()
+{
+    BG_PALETTE[tFree]   = RGB15(31,31,31);
+	BG_PALETTE[tBusy]   = RGB15(21,21,21);
+	BG_PALETTE[tEvil]   = RGB15(0,0,0);
+	BG_PALETTE[tPlayer] = RGB15(0,0,21);
+	BG_PALETTE[tPath]   = RGB15(0,21,0);
+
+    for( int i=0; i<tMax; i++) {
+        gen_tile( tiles[i], i);
+    }
+
+    for( int i=0; i<tMax; i++) {
+        swiCopy( tiles[i], tileMemory+64*i, 32);
+    }
+}
+
+void draw_block( int x, int y, int busy)
+{
+    if( busy) {
+        set_tile(x, y, tBusy);
+    } else {
+        set_tile(x, y, tFree);
     }
 }
 
@@ -127,17 +171,25 @@ void draw_point(Point *pt)
 
     xonix_get_cell(x, y, &c);
 
-    draw_block(x, y, xonix_cell_is(&c, BLOCK));
-
     if( xonix_cell_is(&c, EVIL)) {
-        draw_creature(x, y, RGB15(0,0,0));
+        set_tile(x, y, tEvil);
+        return;
     }
     if( xonix_cell_is(&c, PATH)) {
-        draw_creature(x, y, RGB15(0,21,0));
+        set_tile(x, y, tPath);
+        return;
     }
     if( xonix_cell_is(&c, PLAYER)) {
-        draw_creature(x, y, RGB15(0,0,21));
+        set_tile(x, y, tPlayer);
+        return;
     }
+
+    if( xonix_cell_is(&c, BLOCK)) {
+        set_tile(x, y, tBusy);
+    } else {
+        set_tile(x, y, tFree);
+    }
+
 }
 
 void process_changes()
@@ -167,8 +219,15 @@ int main(void)
 
     PrintConsole bottomScreen;
 
-    videoSetMode(MODE_FB0);
-    vramSetBankA(VRAM_A_LCD);
+    videoSetMode(MODE_0_2D | DISPLAY_BG0_ACTIVE);
+	vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
+
+    tileMemory = (u8*)BG_TILE_RAM(1);
+	mapMemory = (u16*)BG_MAP_RAM(0);
+
+    REG_BG0CNT = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
+
+    mk_tiles();
 
     videoSetModeSub(MODE_0_2D);
     vramSetBankC(VRAM_C_SUB_BG);
@@ -180,7 +239,6 @@ int main(void)
     p_cnt = 0;
 
     init_level();
-
 
     //we like infinite loops in console dev!
     while(1)
