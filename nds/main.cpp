@@ -278,7 +278,7 @@ int main(void)
             iprintf("\x1b[2;9HLevel cleared!\n");
             iprintf("\x1b[4;1HPress 'A' or touch to advance\n");
             touchRead(&touch);
-            if( (touch.px != 0) || (touch.px != 0) || (keysHeld() & KEY_A )) {
+            if( (touch.px != 0) || (touch.py != 0) || (keysHeld() & KEY_A )) {
                 init_level();
             }
         }
