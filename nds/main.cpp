@@ -86,7 +86,7 @@ void mk_tiles()
 	BG_PALETTE[tBusy]   = RGB15(21,21,21);
 	BG_PALETTE[tEvil]   = RGB15(0,0,0);
 	BG_PALETTE[tPlayer] = RGB15(0,0,21);
-	BG_PALETTE[tPath]   = RGB15(0,21,0);
+	BG_PALETTE[tPath]   = RGB15(0,30,0);
 
     for( int i=0; i<tMax; i++) {
         gen_tile( tiles[i], i);
@@ -175,12 +175,12 @@ void draw_point(Point *pt)
         set_tile(x, y, tEvil);
         return;
     }
-    if( xonix_cell_is(&c, PATH)) {
-        set_tile(x, y, tPath);
-        return;
-    }
     if( xonix_cell_is(&c, PLAYER)) {
         set_tile(x, y, tPlayer);
+        return;
+    }
+    if( xonix_cell_is(&c, PATH)) {
+        set_tile(x, y, tPath);
         return;
     }
 
