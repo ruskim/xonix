@@ -173,23 +173,15 @@ void draw_point(Point *pt)
 
     if( xonix_cell_is(&c, EVIL)) {
         set_tile(x, y, tEvil);
-        return;
-    }
-    if( xonix_cell_is(&c, PLAYER)) {
+    } else if( xonix_cell_is(&c, PLAYER)) {
         set_tile(x, y, tPlayer);
-        return;
-    }
-    if( xonix_cell_is(&c, PATH)) {
+    } else if( xonix_cell_is(&c, PATH)) {
         set_tile(x, y, tPath);
-        return;
-    }
-
-    if( xonix_cell_is(&c, BLOCK)) {
+    } else if( xonix_cell_is(&c, BLOCK)) {
         set_tile(x, y, tBusy);
     } else {
         set_tile(x, y, tFree);
     }
-
 }
 
 void process_changes()
@@ -207,6 +199,7 @@ void init_level()
     victory = 0;
     xonix_free();
     evils_cnt++;
+    p_cnt = 0;
     xonix_init(32, 24, 17, evils_cnt, xonix_callback, 0);
     process_changes();
     score_changed = 1;
@@ -235,12 +228,8 @@ int main(void)
 
     consoleSelect(&bottomScreen);
 
-
-    p_cnt = 0;
-
     init_level();
 
-    //we like infinite loops in console dev!
     while(1)
     {
         int key_mask;
