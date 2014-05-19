@@ -17,6 +17,11 @@ typedef unsigned short Cell;
 #define X_KEY_LEFT  0x4
 #define X_KEY_RIGHT 0x8
 
+#define PLAYER_ID      0x0
+#define PATH_ID_SHIFT  0x400
+#define BLOCK_ID_SHIFT 0x8000
+#define EVIL_ID_SHIFT  0x10
+
 typedef enum {
     eObjAdded,
     eObjMoved,

@@ -6,9 +6,6 @@ typedef unsigned short Cell;
 
 #define NET   0x10
 
-#define PATH_ID_SHIFT 0x400
-#define BLOCK_ID_SHIFT 0x8000
-#define EVIL_ID_SHIFT 0x10
 
 
 typedef struct tagPos
@@ -142,7 +139,7 @@ static void add_player(int x, int y)
 
     e.et = eObjAdded;
     e.ot = objPlayer;
-    e.id = 0;
+    e.id = PLAYER_ID;
     e.x = x;
     e.y = y;
     cbrun(&e);

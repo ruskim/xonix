@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+
 #include "xonix.h"
 
 typedef struct
@@ -11,6 +12,15 @@ typedef struct
     int x;
     int y;
 }Point;
+
+
+typedef struct
+{
+    
+    int x;
+    int y;
+
+} Sprite;
 
 Point *p = 0;
 int p_cnt = 0;
@@ -61,6 +71,9 @@ enum {
     tMax
 };
 
+u16 *gfx_evil = 0;
+u16 *gfx_player = 0;
+
 u8 free_tile[64];
 u8 busy_tile[64];
 u8 evil_tile[64];
@@ -91,14 +104,13 @@ void gen_tile(u8 *tile, u8 c)
     }
 }
 
-
 void mk_tiles()
 {
-    BG_PALETTE[tFree]   = RGB15(31,31,31);
-	BG_PALETTE[tBusy]   = RGB15(21,21,21);
-	BG_PALETTE[tEvil]   = RGB15(0,0,0);
-	BG_PALETTE[tPlayer] = RGB15(0,0,21);
-	BG_PALETTE[tPath]   = RGB15(0,30,0);
+    SPRITE_PALETTE[tFree]   = BG_PALETTE[tFree]   = RGB15(31,31,31);
+	SPRITE_PALETTE[tBusy]   = BG_PALETTE[tBusy]   = RGB15(21,21,21);
+	SPRITE_PALETTE[tEvil]   = BG_PALETTE[tEvil]   = RGB15(0,0,0);
+	SPRITE_PALETTE[tPlayer] = BG_PALETTE[tPlayer] = RGB15(0,0,21);
+	SPRITE_PALETTE[tPath]   = BG_PALETTE[tPath]   = RGB15(0,30,0);
 
     for( int i=0; i<tMax; i++) {
         gen_tile( tiles[i], i);
@@ -107,6 +119,18 @@ void mk_tiles()
     for( int i=0; i<tMax; i++) {
         swiCopy( tiles[i], tileMemory+64*i, 32);
     }
+}
+
+void mk_sprites()
+{
+    gfx_evil   = oamAllocateGfx(&oamMain, SpriteSize_8x8,SpriteColorFormat_256Color);
+    gfx_player = oamAllocateGfx(&oamMain, SpriteSize_8x8,SpriteColorFormat_256Color);
+
+	for(int i = 0; i < 8 * 8 / 2; i++)
+	{
+		gfx_evil[i]   = ((u16 *)evil_tile)[i];
+		gfx_player[i] = ((u16 *)player_tile)[i];
+	}
 }
 
 void draw_block( int x, int y, int busy)
@@ -184,15 +208,42 @@ void draw_point(Point *pt)
     xonix_get_cell(x, y, &c);
 
     if( xonix_cell_is(&c, EVIL)) {
-        set_tile(x, y, tEvil);
+		oamSet(&oamMain, //main graphics engine context
+			1,           //oam index (0 to 127)  
+			BS*x, BS*y,   //x and y pixle location of the sprite
+			0,                    //priority, lower renders last (on top)
+			0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
+			SpriteSize_8x8,     
+			SpriteColorFormat_256Color, 
+			gfx_evil,                  //pointer to the loaded graphics
+			-1,                  //sprite rotation data  
+			false,               //double the size when rotating?
+			false,			//hide the sprite?
+			false, false, //vflip, hflip
+			false	//apply mosaic
+			);
+
     } else if( xonix_cell_is(&c, PLAYER)) {
-        set_tile(x, y, tPlayer);
+		oamSet(&oamMain, //main graphics engine context
+			0,           //oam index (0 to 127)  
+			BS*x, BS*y,   //x and y pixle location of the sprite
+			0,                    //priority, lower renders last (on top)
+			0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
+			SpriteSize_8x8,     
+			SpriteColorFormat_256Color, 
+			gfx_player,                  //pointer to the loaded graphics
+			-1,                  //sprite rotation data  
+			false,               //double the size when rotating?
+			false,			//hide the sprite?
+			false, false, //vflip, hflip
+			false	//apply mosaic
+			);
     } else if( xonix_cell_is(&c, PATH)) {
         set_tile(x, y, tPath);
     } else if( xonix_cell_is(&c, BLOCK)) {
-        set_tile(x, y, tBusy);
+        draw_block(x, y, 1);
     } else {
-        set_tile(x, y, tFree);
+        draw_block(x, y, 0);
     }
 }
 
@@ -220,18 +271,9 @@ void init_level()
 
 int main(void) 
 {
-    touchPosition touch;
-    int sx=0,sy=0;
-    int t = 0;
-
-
     PrintConsole bottomScreen;
 
-    //videoSetMode(MODE_0_2D | DISPLAY_BG0_ACTIVE );
-    //videoSetMode(MODE_0_2D | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_BG0_ACTIVE);
-    //videoSetMode(MODE_0_2D);
-
-    /* sprites init */
+    
     vramSetBankA(VRAM_A_MAIN_SPRITE);
 	vramSetBankB(VRAM_B_MAIN_BG_0x06000000);
     vramSetBankC(VRAM_C_SUB_BG);
@@ -239,64 +281,24 @@ int main(void)
     videoSetMode(MODE_0_2D | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_BG0_ACTIVE);
     videoSetModeSub(MODE_0_2D);
 
-
-    oamInit(&oamMain, SpriteMapping_1D_32, false);
-
-    u16* gfx = oamAllocateGfx(&oamMain, SpriteSize_8x8,SpriteColorFormat_256Color);
-    SPRITE_PALETTE[0] = RGB15(31,0,0);
-    SPRITE_PALETTE[1] = RGB15(0,31,0);
-    SPRITE_PALETTE[2] = RGB15(0,0,31);
-
-	for(int i = 0; i < 8 * 8 / 2; i++)
-	{
-		gfx[i] = ((u16 *)sprite)[i];
-	}
-    
-
-
     /* background init */
-
-
     tileMemory = (u8*)BG_TILE_RAM(1);
 	mapMemory = (u16*)BG_MAP_RAM(0);
-
     REG_BG0CNT = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY_3;
-
     mk_tiles();
 
-    videoSetModeSub(MODE_0_2D);
+    /* sprites init */
+    oamInit(&oamMain, SpriteMapping_1D_32, false);
+    mk_sprites();
+
+    /* console init */
     consoleInit(&bottomScreen, 3,BgType_Text4bpp, BgSize_T_256x256, 31, 0, false, true);
-
-
-
     consoleSelect(&bottomScreen);
 
     init_level();
 
     while(1)
     {
-
-        t++;
-		oamSet(&oamMain, //main graphics engine context
-			0,           //oam index (0 to 127)  
-			sx, sy,   //x and y pixle location of the sprite
-			0,                    //priority, lower renders last (on top)
-			0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
-			SpriteSize_8x8,     
-			SpriteColorFormat_256Color, 
-			gfx,                  //pointer to the loaded graphics
-			-1,                  //sprite rotation data  
-			false,               //double the size when rotating?
-			false,			//hide the sprite?
-			false, false, //vflip, hflip
-			false	//apply mosaic
-			);
-
-        if( t%10 == 0) {
-            sx++;
-            sy++;
-        }
-
         int key_mask;
 
         swiWaitForVBlank();
@@ -332,8 +334,7 @@ int main(void)
         if( victory) {
             iprintf("\x1b[2;9HLevel cleared!\n");
             iprintf("\x1b[4;1HPress 'A' or touch to advance\n");
-            touchRead(&touch);
-            if( (touch.px != 0) || (touch.py != 0) || (keysHeld() & KEY_A )) {
+            if( (keysHeld() & KEY_TOUCH) || (keysHeld() & KEY_A )) {
                 init_level();
             }
         }
