@@ -13,18 +13,25 @@ typedef struct
     int y;
 }Point;
 
-
-typedef struct
-{
-    
-    int x;
-    int y;
-
-} Sprite;
-
 Point *p = 0;
 int p_cnt = 0;
 int p_max = 0;
+
+
+typedef struct
+{
+    int x;
+    int y;
+    int transition;
+    int old_x;
+    int old_y;
+    u16 *gfx;
+    int oam_idx;
+    int hidden;
+} Sprite;
+
+Sprite *sprites = 0;
+int s_max = 0;
 
 int evils_cnt = 0;
 int victory = 0;
@@ -165,24 +172,96 @@ void add_changes(int x, int y)
     p_cnt++;
 }
 
+int sprite_id( XonixEvent *e)
+{
+    if( e->ot == objEvil) {
+        return e->id - EVIL_ID_SHIFT + 1;
+    } 
+    return 0;
+}
+
+void add_sprite( XonixEvent *e)
+{
+    int id = sprite_id(e);
+    if( id >= s_max) {
+        sprites = (Sprite *)realloc(sprites, (id+1)*sizeof(Sprite));
+        s_max = id + 1;
+    }
+
+    Sprite *s = sprites+id;
+    s->x = e->x*BS;
+    s->y = e->y*BS;
+    s->oam_idx = id;
+    if( e->ot == objPlayer) {
+        s->gfx = gfx_player;
+    } else {
+        s->gfx = gfx_evil;
+    }
+    s->transition = 0;
+    s->hidden = 0;
+
+    oamSet(&oamMain, //main graphics engine context
+        s->oam_idx,           //oam index (0 to 127)  
+        s->x,
+        s->y,
+        0,                    //priority, lower renders last (on top)
+        0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
+        SpriteSize_8x8,     
+        SpriteColorFormat_256Color, 
+        s->gfx,                  //pointer to the loaded graphics
+        -1,                  //sprite rotation data  
+        false,               //double the size when rotating?
+        false,			//hide the sprite?
+        false, false, //vflip, hflip
+        false	//apply mosaic
+        );
+}
+
+void move_sprite( XonixEvent *e)
+{
+    int id = sprite_id(e);
+    Sprite *s = sprites + id;
+
+    s->x = e->x*BS;
+    s->y = e->y*BS;
+
+    oamSetXY(&oamMain, s->oam_idx, s->x, s->y);
+}
+
+void delete_sprite( XonixEvent *e)
+{
+    int id = sprite_id(e);
+    Sprite *s = sprites + id;
+
+    oamSetHidden(&oamMain, s->oam_idx, true);
+    s->hidden = 1;
+}
+
 void xonix_callback(void *tag, XonixEvent *e)
 {
     switch(e->et) {
         case eObjAdded:
             if( e->ot == objBlock) {
                 draw_block(e->x, e->y, 1);
-            } else {
+            } else if (e->ot == objPath) {
                 add_changes(e->x, e->y);
+            } else {
+                add_sprite(e);
             }
             break;
 
         case eObjMoved:
-            add_changes(e->x, e->y);
+            move_sprite(e);
+            //add_changes(e->x, e->y);
             add_changes(e->prev_x, e->prev_y);
             break;
 
         case eObjDeleted:
-            add_changes(e->x, e->y);
+            if( (e->ot == objBlock) || (e->ot == objPath)) {
+                add_changes(e->x, e->y);
+            } else {
+                delete_sprite(e);
+            }
             break;
 
         case eScore:
