@@ -22,16 +22,18 @@ typedef struct
 {
     int x;
     int y;
-    int transition;
-    int old_x;
-    int old_y;
+    int t_len;
+    int t_done;
+    int prev_x;
+    int prev_y;
     u16 *gfx;
     int oam_idx;
-    int hidden;
+    int visible;
 } Sprite;
 
 Sprite *sprites = 0;
-int s_max = 0;
+int s_max = 21;
+int max_s_id = -1;
 
 int evils_cnt = 0;
 int victory = 0;
@@ -197,8 +199,9 @@ void add_sprite( XonixEvent *e)
     } else {
         s->gfx = gfx_evil;
     }
-    s->transition = 0;
-    s->hidden = 0;
+    s->t_len = 0;
+    s->t_done = 0;
+    s->visible = 1;
 
     oamSet(&oamMain, //main graphics engine context
         s->oam_idx,           //oam index (0 to 127)  
@@ -225,7 +228,13 @@ void move_sprite( XonixEvent *e)
     s->x = e->x*BS;
     s->y = e->y*BS;
 
-    oamSetXY(&oamMain, s->oam_idx, s->x, s->y);
+    s->prev_x = e->prev_x*BS;
+    s->prev_y = e->prev_y*BS;
+
+    s->t_len = e->t_len;
+    s->t_done = 0;
+
+    //oamSetXY(&oamMain, s->oam_idx, s->x, s->y);
 }
 
 void delete_sprite( XonixEvent *e)
@@ -234,7 +243,28 @@ void delete_sprite( XonixEvent *e)
     Sprite *s = sprites + id;
 
     oamSetHidden(&oamMain, s->oam_idx, true);
-    s->hidden = 1;
+    s->visible = 0;
+}
+
+void tick_sprite( Sprite *s)
+{
+    if( s->visible == 0) {
+        return;
+    }
+    if( s->t_len == 0) {
+        return;
+    }
+    s->t_len--;
+    s->t_done++;
+
+    int x, y;
+    x = (s->x*s->t_done + s->prev_x*s->t_len)/(s->t_done + s->t_len);
+    y = (s->y*s->t_done + s->prev_y*s->t_len)/(s->t_done + s->t_len);
+    oamSetXY(&oamMain, s->oam_idx, x, y);
+    if( s->t_len == 0) {
+        add_changes(s->prev_x/BS,s->prev_y/BS);
+    }
+
 }
 
 void xonix_callback(void *tag, XonixEvent *e)
@@ -244,7 +274,7 @@ void xonix_callback(void *tag, XonixEvent *e)
             if( e->ot == objBlock) {
                 draw_block(e->x, e->y, 1);
             } else if (e->ot == objPath) {
-                add_changes(e->x, e->y);
+                //add_changes(e->x, e->y);
             } else {
                 add_sprite(e);
             }
@@ -305,6 +335,13 @@ void process_changes()
 
 void init_level()
 {
+    for( int i=0; i<s_max; i++) {
+        Sprite *s = sprites+i;
+        if( s->visible != 0) {
+            oamSetHidden(&oamMain, s->oam_idx, true);
+            s->visible = 0;
+        }
+    }
     clear_screen();
     consoleClear();
     victory = 0;
@@ -321,7 +358,10 @@ int main(void)
 {
     PrintConsole bottomScreen;
 
-    
+    int ss = sizeof(Sprite)*s_max;
+    sprites = (Sprite *)malloc( ss);
+    memset( sprites, 0, ss);
+
     vramSetBankA(VRAM_A_MAIN_SPRITE);
 	vramSetBankB(VRAM_B_MAIN_BG_0x06000000);
     vramSetBankC(VRAM_C_SUB_BG);
@@ -385,6 +425,9 @@ int main(void)
             if( (keysHeld() & KEY_TOUCH) || (keysHeld() & KEY_A )) {
                 init_level();
             }
+        }
+        for( int i=0; i<s_max; i++) {
+            tick_sprite( sprites+i);
         }
         oamUpdate(&oamMain);
     }
