@@ -286,38 +286,7 @@ void draw_point(Point *pt)
 
     xonix_get_cell(x, y, &c);
 
-    if( xonix_cell_is(&c, EVIL)) {
-		oamSet(&oamMain, //main graphics engine context
-			1,           //oam index (0 to 127)  
-			BS*x, BS*y,   //x and y pixle location of the sprite
-			0,                    //priority, lower renders last (on top)
-			0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
-			SpriteSize_8x8,     
-			SpriteColorFormat_256Color, 
-			gfx_evil,                  //pointer to the loaded graphics
-			-1,                  //sprite rotation data  
-			false,               //double the size when rotating?
-			false,			//hide the sprite?
-			false, false, //vflip, hflip
-			false	//apply mosaic
-			);
-
-    } else if( xonix_cell_is(&c, PLAYER)) {
-		oamSet(&oamMain, //main graphics engine context
-			0,           //oam index (0 to 127)  
-			BS*x, BS*y,   //x and y pixle location of the sprite
-			0,                    //priority, lower renders last (on top)
-			0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
-			SpriteSize_8x8,     
-			SpriteColorFormat_256Color, 
-			gfx_player,                  //pointer to the loaded graphics
-			-1,                  //sprite rotation data  
-			false,               //double the size when rotating?
-			false,			//hide the sprite?
-			false, false, //vflip, hflip
-			false	//apply mosaic
-			);
-    } else if( xonix_cell_is(&c, PATH)) {
+    if( xonix_cell_is(&c, PATH)) {
         set_tile(x, y, tPath);
     } else if( xonix_cell_is(&c, BLOCK)) {
         draw_block(x, y, 1);
