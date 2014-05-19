@@ -40,6 +40,18 @@ u8 base_tile[64] =
 	0,0,0,0,0,0,0,0
 };
 
+u8 sprite[64] = 
+{
+	0,0,0,0,0,0,0,0,
+	0,2,2,2,2,2,2,0,
+	0,2,0,0,0,0,2,0,
+	0,2,0,0,0,0,2,0,
+	0,2,0,0,0,0,2,0,
+	0,2,0,0,0,0,2,0,
+	0,2,2,2,2,2,2,0,
+	0,0,0,0,0,0,0,0
+};
+
 enum {
     tFree=0,
     tBusy,
@@ -209,6 +221,9 @@ void init_level()
 int main(void) 
 {
     touchPosition touch;
+    int sx=0,sy=0;
+    int t = 0;
+
 
     PrintConsole bottomScreen;
 
@@ -234,7 +249,7 @@ int main(void)
 
 	for(int i = 0; i < 8 * 8 / 2; i++)
 	{
-		gfx[i] = ((u16 *)base_tile)[i];
+		gfx[i] = ((u16 *)sprite)[i];
 	}
     
 
@@ -261,10 +276,10 @@ int main(void)
     while(1)
     {
 
-        /*
+        t++;
 		oamSet(&oamMain, //main graphics engine context
 			0,           //oam index (0 to 127)  
-			50, 50,   //x and y pixle location of the sprite
+			sx, sy,   //x and y pixle location of the sprite
 			0,                    //priority, lower renders last (on top)
 			0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
 			SpriteSize_8x8,     
@@ -275,8 +290,13 @@ int main(void)
 			false,			//hide the sprite?
 			false, false, //vflip, hflip
 			false	//apply mosaic
-			);              
-*/
+			);
+
+        if( t%10 == 0) {
+            sx++;
+            sy++;
+        }
+
         int key_mask;
 
         swiWaitForVBlank();
@@ -317,7 +337,7 @@ int main(void)
                 init_level();
             }
         }
-//        oamUpdate(&oamMain);
+        oamUpdate(&oamMain);
     }
 
     return 0;
