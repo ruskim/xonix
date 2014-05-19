@@ -212,19 +212,47 @@ int main(void)
 
     PrintConsole bottomScreen;
 
-    videoSetMode(MODE_0_2D | DISPLAY_BG0_ACTIVE);
-	vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
+    //videoSetMode(MODE_0_2D | DISPLAY_BG0_ACTIVE );
+    //videoSetMode(MODE_0_2D | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_BG0_ACTIVE);
+    //videoSetMode(MODE_0_2D);
+
+    /* sprites init */
+    vramSetBankA(VRAM_A_MAIN_SPRITE);
+	vramSetBankB(VRAM_B_MAIN_BG_0x06000000);
+    vramSetBankC(VRAM_C_SUB_BG);
+
+    videoSetMode(MODE_0_2D | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_BG0_ACTIVE);
+    videoSetModeSub(MODE_0_2D);
+
+
+    oamInit(&oamMain, SpriteMapping_1D_32, false);
+
+    u16* gfx = oamAllocateGfx(&oamMain, SpriteSize_8x8,SpriteColorFormat_256Color);
+    SPRITE_PALETTE[0] = RGB15(31,0,0);
+    SPRITE_PALETTE[1] = RGB15(0,31,0);
+    SPRITE_PALETTE[2] = RGB15(0,0,31);
+
+	for(int i = 0; i < 8 * 8 / 2; i++)
+	{
+		gfx[i] = ((u16 *)base_tile)[i];
+	}
+    
+
+
+    /* background init */
+
 
     tileMemory = (u8*)BG_TILE_RAM(1);
 	mapMemory = (u16*)BG_MAP_RAM(0);
 
-    REG_BG0CNT = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
+    REG_BG0CNT = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY_3;
 
     mk_tiles();
 
     videoSetModeSub(MODE_0_2D);
-    vramSetBankC(VRAM_C_SUB_BG);
     consoleInit(&bottomScreen, 3,BgType_Text4bpp, BgSize_T_256x256, 31, 0, false, true);
+
+
 
     consoleSelect(&bottomScreen);
 
@@ -232,11 +260,29 @@ int main(void)
 
     while(1)
     {
+
+        /*
+		oamSet(&oamMain, //main graphics engine context
+			0,           //oam index (0 to 127)  
+			50, 50,   //x and y pixle location of the sprite
+			0,                    //priority, lower renders last (on top)
+			0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
+			SpriteSize_8x8,     
+			SpriteColorFormat_256Color, 
+			gfx,                  //pointer to the loaded graphics
+			-1,                  //sprite rotation data  
+			false,               //double the size when rotating?
+			false,			//hide the sprite?
+			false, false, //vflip, hflip
+			false	//apply mosaic
+			);              
+*/
         int key_mask;
 
         swiWaitForVBlank();
         scanKeys();
         key_mask = 0;
+
 
         if( keysHeld() & KEY_UP ) {
             key_mask |= X_KEY_UP;
@@ -271,6 +317,7 @@ int main(void)
                 init_level();
             }
         }
+//        oamUpdate(&oamMain);
     }
 
     return 0;
