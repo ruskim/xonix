@@ -7,6 +7,8 @@
 
 #include "xonix.h"
 
+//int ticks=0;
+
 typedef struct
 {
     int x;
@@ -251,6 +253,8 @@ void tick_sprite( Sprite *s)
     if( s->visible == 0) {
         return;
     }
+    //oamSetAffineIndex(&oamMain, s->oam_idx, 0, 0);
+
     if( s->t_len == 0) {
         return;
     }
@@ -348,6 +352,7 @@ void init_level()
     xonix_free();
     evils_cnt++;
     p_cnt = 0;
+//    ticks = 0;
     xonix_init(32, 24, 17, evils_cnt, xonix_callback, 0);
     process_changes();
     score_changed = 1;
@@ -357,6 +362,7 @@ void init_level()
 int main(void) 
 {
     PrintConsole bottomScreen;
+//    int angle;
 
     int ss = sizeof(Sprite)*s_max;
     sprites = (Sprite *)malloc( ss);
@@ -390,6 +396,12 @@ int main(void)
         int key_mask;
 
         swiWaitForVBlank();
+
+        //ticks++;
+
+        //angle = degreesToAngle(3*ticks);
+        //oamRotateScale(&oamMain, 0, angle, intToFixed(1, 8), intToFixed(1, 8));
+
         scanKeys();
         key_mask = 0;
 
@@ -412,6 +424,9 @@ int main(void)
 
         p_cnt = 0;
         xonix_advance(key_mask);
+        for( int i=0; i<s_max; i++) {
+            tick_sprite( sprites+i);
+        }
         process_changes();
 
         if( score_changed) {
@@ -425,9 +440,6 @@ int main(void)
             if( (keysHeld() & KEY_TOUCH) || (keysHeld() & KEY_A )) {
                 init_level();
             }
-        }
-        for( int i=0; i<s_max; i++) {
-            tick_sprite( sprites+i);
         }
         oamUpdate(&oamMain);
     }
